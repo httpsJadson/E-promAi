@@ -9,7 +9,6 @@
 const btn_mic = document.getElementById('robot-microfone');
 const Recognition = initRecognition(); 
 var Listening = false; 
-let waitingForQuestion = false;
 
 btn_mic.addEventListener('click', (e) => {
     if(!Recognition) return;
@@ -47,20 +46,16 @@ function initRecognition() {
     }
     
     gRecognition.lang = "pt_BR";
-    gRecognition.onstart = () => Listening = true;
+    gRecognition.onstart = () => {
+        Listening = true;
+        // Envia a mensagem de boas-vindas ao iniciar a conversação
+        SendQuestion("Olá, eu sou o EpromAi, seu assistente virtual. Como posso ajudar você hoje?");
+    };
     gRecognition.onend = () => Listening = false;
     gRecognition.onerror = (e) => console.log(`SpeechRecognition ERROR: ${e}`);
     gRecognition.continuous = false;
     gRecognition.onresult = (e) => {
-        const transcript = e.results[0][0].transcript.toLowerCase();
-        console.log(transcript);
-        if (transcript.includes("epromai")) {
-            SendQuestion("Olá, eu sou o EpromAi, seu assistente virtual. Como posso ajudar você hoje?");
-            waitingForQuestion = true;
-        } else if (waitingForQuestion) {
-            SendQuestion(transcript);
-            waitingForQuestion = false;
-        }
+        SendQuestion(e.results[0][0].transcript);    
     };
     
     return gRecognition;
@@ -83,45 +78,51 @@ function SendQuestion(question) {
         body: JSON.stringify({
             model: "gpt-3.5-turbo-0301",
             "messages": [
-                {"role": "system", "content": "Você é um assistente social muito solícito, gentil, amigável e conciso de suas respostas. Você é comumente chamado de EpromAi como apelido. Você foi treinado para responder perguntas sobre equidade de gênero, proteção da mulher e dúvidas sexuais, relacionadas ao corpo, mudanças hormonais e corporais."},
-                {"role": "system", "content": "Responda sempre com uma linguagem de fácil entendimento, e tente sempre ao máximo resumir o possível do texto. E também só responda perguntas sobre equidade de gênero, proteção da mulher e dúvidas sexuais relacionadas ao corpo como mudanças hormonais e corporais."},
+                {"role": "system", "content": "Você é um assistente social muito solícito, gentil, amigavel e conciso de suas respostas. Você é comumente chamado de EpromAi como apelido. Você foi treinado para responder perguntas sobre equidade de gênero, proteção da mulher e duvidas sexuais, relacionadas ao corpo, mudanças hormonais e corporais"},
+                {"role": "system", "content": "Responda sempre com uma linguagem de fácil entendimento, e tente sempre ao máximo resumir o possivel do texto. E também só responda perguntas sobre matéria academicas (de estudo), materia escolares."},
                 {"role": "system", "content": str},
                 {"role": "user", "content": question}
             ],
             max_tokens: 1000,
             temperature: 0.6, 
         })
-    })
-    .then((response) => response.json())
-    .then((json) => {
-        if (json.error?.message) writeConversation("Aconteceu algum problema, infelizmente não consegui obter uma resposta para sua pergunta.");
-        else if (json.choices?.[0].message) {
-            var response = json.choices[0].message.content || "Desculpe, Não consegui achar uma resposta para sua dúvida.";
-            
-            console.log(response);
-            writeConversation(response);
-            msgHistory.push(response);
-            
-            var mouth = document.getElementById("mouth");
-            mouth.classList.add("speaking");
-            var mouth2 = document.getElementById("mouth2");
-            mouth2.classList.add("speaking2");
-        }
-    });    
+        })
+        .then((response) => response.json())
+        .then((json) => {
+            if (json.error?.message) writeConversation("Aconteceu algum problema, infelizmente não consegui obter uma resposta para sua pergunta.");
+        
+            else if (json.choices?.[0].message) {
+                var response = json.choices[0].message.content || "Desculpe, Não consegui achar uma respota para sua dúvida.";
+                
+                console.log(response);
+                writeConversation(response);
+                msgHistory.push(response);
+                //const merda = response;
+                //exibirLegenda(merda);
+                
+                var mouth = document.getElementById("mouth");
+                mouth.classList.add(    "speaking");
+                var mouth2 = document.getElementById("mouth2");
+                mouth2.classList.add("speaking2");
+            }
+        })    
 }
 
 function writeConversation(text) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.9; // Define a velocidade de fala (1.0 é a velocidade normal)
+    //utterance.voice = speechSynthesis.getVoices()[16]; // Define a voz a ser usada (se disponível)
 
-    speechSynthesis.speak(utterance);
+    speechSynthesis.speak(utterance)
     utterance.addEventListener('end', () => {
         var mouth = document.getElementById("mouth");
         mouth.classList.remove("speaking");
         var mouth2 = document.getElementById("mouth2");
         mouth2.classList.remove("speaking2");
-    });
+    })
 }
+
+//
 
 
 //
